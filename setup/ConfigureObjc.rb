@@ -1,6 +1,6 @@
 module Pod
 
-  class ConfigureSwift
+  class ConfigureObjc
     attr_reader :configurator
 
     def self.perform(options)
@@ -13,30 +13,34 @@ module Pod
 
     def perform
       keep_demo = configurator.ask_with_answers("Would you like to include a demo application with your library", ["Yes", "No"]).to_sym
+      
+      configurator.set_test_framework("xctest", "m", "objc")
 
-      configurator.set_test_framework "xctest", "swift", "swift"
+      prefix = nil
+
+      loop do
+        prefix = configurator.ask("What is your class prefix").upcase
+
+        if prefix.include?(' ')
+          puts 'Your class prefix cannot contain spaces.'.red
+        else
+          break
+        end
+      end
 
       Pod::ProjectManipulator.new({
         :configurator => @configurator,
-        :xcodeproj_path => "templates/swift/Example/PROJECT.xcodeproj",
+        :xcodeproj_path => "templates/objc/Example/PROJECT.xcodeproj",
         :platform => :ios,
         :remove_demo_project => (keep_demo == :no),
-        :prefix => ""
+        :prefix => prefix
       }).run
 
-      `mv ./templates/swift/* ./`
-
       # There has to be a single file in the Classes dir
-      # or a framework won't be created
-      `touch Pod/Classes/ReplaceMe.swift`
+      # or a framework won't be created, which is now default
+      `touch Pod/Classes/ReplaceMe.m`
 
-      # The Podspec should be 8.0 instead of 7.0
-      text = File.read("NAME.podspec")
-      text.gsub!("7.0", "8.0")
-      File.open("NAME.podspec", "w") { |file| file.puts text }
-
-      # remove podspec for osx
-      `rm ./NAME-osx.podspec`
+      `mv ./templates/objc/* ./`
     end
   end
 
